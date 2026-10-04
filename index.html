@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Mood</title>
+  <link rel="manifest" href="manifest.json" />
+  <style>
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a24;
+      --surface2: #22222f;
+      --border: #2e2e3e;
+      --text: #e8e8f0;
+      --text-muted: #7a7a96;
+      --accent: #7c6af5;
+      --accent-glow: rgba(124, 106, 245, 0.25);
+      --success: #4caf82;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: env(safe-area-inset-top, 16px) 20px env(safe-area-inset-bottom, 20px);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0 8px;
+    }
+
+    header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    header span { color: var(--accent); }
+
+    .time-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Tab bar */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 4px;
+      margin: 16px 0;
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 9px;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: var(--surface2);
+      color: var(--text);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+
+    /* Views */
+    .view { display: none; flex-direction: column; gap: 20px; flex: 1; }
+    .view.active { display: flex; }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .card-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* Mood grid */
+    .mood-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    .mood-btn {
+      aspect-ratio: 1;
+      border: 2px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 17px;
+      font-weight: 700;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+    }
+
+    .mood-btn:active { transform: scale(0.93); }
+
+    .mood-btn.selected {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+      color: var(--accent);
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    /* Color tint by value */
+    .mood-btn[data-v="1"]  { --tint: #e05252; }
+    .mood-btn[data-v="2"]  { --tint: #e07252; }
+    .mood-btn[data-v="3"]  { --tint: #e09952; }
+    .mood-btn[data-v="4"]  { --tint: #d4b84a; }
+    .mood-btn[data-v="5"]  { --tint: #c4c44a; }
+    .mood-btn[data-v="6"]  { --tint: #9ecc52; }
+    .mood-btn[data-v="7"]  { --tint: #6ccc62; }
+    .mood-btn[data-v="8"]  { --tint: #4cbf82; }
+    .mood-btn[data-v="9"]  { --tint: #4cb0cc; }
+    .mood-btn[data-v="10"] { --tint: #7c6af5; }
+
+    .mood-btn.selected {
+      border-color: var(--tint) !important;
+      background: color-mix(in srgb, var(--tint) 15%, transparent) !important;
+      color: var(--tint) !important;
+      box-shadow: 0 0 20px color-mix(in srgb, var(--tint) 30%, transparent) !important;
+    }
+
+    .mood-label {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Textarea */
+    textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+      padding: 14px;
+      resize: none;
+      outline: none;
+      line-height: 1.5;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--text-muted); }
+
+    /* Submit */
+    .submit-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 16px;
+      width: 100%;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.2px;
+    }
+
+    .submit-btn:active { transform: scale(0.97); opacity: 0.9; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--success);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 100px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 100;
+      white-space: nowrap;
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* History */
+    .entry-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .entry {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .entry-mood {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .entry-meta { flex: 1; min-width: 0; }
+    .entry-datetime { font-size: 13px; color: var(--text-muted); margin-bottom: 2px; }
+    .entry-note { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 40px 0;
+      font-size: 15px;
+    }
+
+    /* Stats */
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat {
+      background: var(--surface);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--accent);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    /* Notif banner */
+    .notif-banner {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .notif-icon { font-size: 28px; flex-shrink: 0; }
+
+    .notif-text { flex: 1; }
+    .notif-text strong { font-size: 14px; display: block; margin-bottom: 2px; }
+    .notif-text span { font-size: 12px; color: var(--text-muted); }
+
+    .notif-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 9px 14px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* Chart bar */
+    .mini-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 60px;
+      margin-top: 4px;
+    }
+
+    .bar-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      height: 100%;
+      justify-content: flex-end;
+    }
+
+    .bar {
+      width: 100%;
+      border-radius: 4px 4px 0 0;
+      min-height: 3px;
+      transition: height 0.4s cubic-bezier(0.34, 1.2, 0.64, 1);
+    }
+
+    .bar-day {
+      font-size: 9px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    #config-url {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: monospace;
+      padding: 12px;
+      width: 100%;
+      outline: none;
+    }
+
+    #config-url:focus { border-color: var(--accent); }
+    #config-url::placeholder { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Mood <span>●</span></h1>
+  <span class="time-label" id="clock"></span>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('log')">Enregistrer</button>
+  <button class="tab-btn" onclick="switchTab('history')">Historique</button>
+  <button class="tab-btn" onclick="switchTab('settings')">Réglages</button>
+</div>
+
+<!-- LOG TAB -->
+<div class="view active" id="tab-log">
+
+  <div id="notif-banner" class="notif-banner" style="display:none">
+    <div class="notif-icon">🔔</div>
+    <div class="notif-text">
+      <strong>Rappels automatiques</strong>
+      <span>3× par jour à des heures aléatoires</span>
+    </div>
+    <button class="notif-btn" onclick="requestNotifications()">Activer</button>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Comment tu te sens ?</div>
+    <div class="mood-grid" id="mood-grid">
+      <!-- generated by JS -->
+    </div>
+    <div class="mood-label">
+      <span>Très mal</span>
+      <span>Excellent</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Note (optionnelle)</div>
+    <textarea id="note" rows="3" placeholder="Qu'est-ce qui influence ton humeur en ce moment ?"></textarea>
+  </div>
+
+  <button class="submit-btn" id="submit-btn" onclick="submitMood()">Enregistrer</button>
+
+</div>
+
+<!-- HISTORY TAB -->
+<div class="view" id="tab-history">
+  <div class="stats-row" id="stats-row">
+    <div class="stat"><div class="stat-value" id="stat-avg">—</div><div class="stat-label">Moyenne</div></div>
+    <div class="stat"><div class="stat-value" id="stat-count">—</div><div class="stat-label">Entrées</div></div>
+    <div class="stat"><div class="stat-value" id="stat-streak">—</div><div class="stat-label">Jours</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-label">7 derniers jours</div>
+    <div class="mini-chart" id="mini-chart"></div>
+  </div>
+
+  <div class="entry-list" id="entry-list">
+    <div class="empty-state">Chargement…</div>
+  </div>
+</div>
+
+<!-- SETTINGS TAB -->
+<div class="view" id="tab-settings">
+  <div class="card">
+    <div class="card-label">URL Google Apps Script</div>
+    <input id="config-url" type="url"
+      placeholder="https://script.google.com/macros/s/…/exec"
+      oninput="saveUrl(this.value)" />
+    <p style="font-size:12px; color:var(--text-muted); margin-top:10px; line-height:1.6">
+      Colle ici l'URL générée après le déploiement de ton Apps Script.<br>
+      Voir <code>apps-script.js</code> pour les instructions.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-label">Fenêtres de rappel</div>
+    <p style="font-size:14px; color:var(--text-muted); line-height:1.7">
+      🌅 <strong style="color:var(--text)">Matin</strong> — 8h00 à 11h00<br>
+      ☀️ <strong style="color:var(--text)">Midi</strong> — 12h00 à 15h00<br>
+      🌙 <strong style="color:var(--text)">Soir</strong> — 18h00 à 21h00<br><br>
+      Une heure aléatoire est choisie dans chaque fenêtre chaque jour.
+    </p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────────
+// Colle ton URL Apps Script ici ou via l'onglet Réglages
+const FALLBACK_URL = "";
+
+// ─── STATE ────────────────────────────────────────────────────
+let selectedMood = null;
+const APPS_SCRIPT_URL = () => localStorage.getItem("apps_script_url") || FALLBACK_URL;
+
+// ─── INIT ─────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  buildMoodGrid();
+  updateClock();
+  setInterval(updateClock, 30000);
+
+  // Restore URL
+  const saved = localStorage.getItem("apps_script_url");
+  if (saved) document.getElementById("config-url").value = saved;
+
+  // Show notif banner if not yet granted
+  if ("Notification" in window && Notification.permission === "default") {
+    document.getElementById("notif-banner").style.display = "flex";
+  }
+
+  // Register service worker
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      scheduleNotificationsIfNeeded();
+    });
+  }
+});
+
+// ─── CLOCK ────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById("clock").textContent =
+    now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+// ─── TABS ─────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("tab-" + tab).classList.add("active");
+  event.currentTarget.classList.add("active");
+
+  if (tab === "history") loadHistory();
+}
+
+// ─── MOOD GRID ────────────────────────────────────────────────
+function buildMoodGrid() {
+  const grid = document.getElementById("mood-grid");
+  for (let i = 1; i <= 10; i++) {
+    const btn = document.createElement("button");
+    btn.className = "mood-btn";
+    btn.dataset.v = i;
+    btn.textContent = i;
+    btn.onclick = () => selectMood(i);
+    grid.appendChild(btn);
+  }
+}
+
+function selectMood(val) {
+  selectedMood = val;
+  document.querySelectorAll(".mood-btn").forEach(b => {
+    b.classList.toggle("selected", parseInt(b.dataset.v) === val);
+  });
+}
+
+// ─── SUBMIT ───────────────────────────────────────────────────
+async function submitMood() {
+  if (!selectedMood) {
+    showToast("Choisis une humeur d'abord !", "#e05252");
+    return;
+  }
+
+  const url = APPS_SCRIPT_URL();
+  if (!url) {
+    showToast("Configure l'URL Apps Script dans Réglages", "#e07252");
+    return;
+  }
+
+  const btn = document.getElementById("submit-btn");
+  btn.disabled = true;
+  btn.textContent = "Enregistrement…";
+
+  const payload = {
+    mood: selectedMood,
+    note: document.getElementById("note").value.trim(),
+    timestamp: new Date().toISOString()
+  };
+
+  try {
+    await fetch(url, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      mode: "no-cors" // Apps Script ne renvoie pas les headers CORS en doPost
+    });
+
+    // Store locally as backup
+    const local = JSON.parse(localStorage.getItem("local_entries") || "[]");
+    local.unshift(payload);
+    if (local.length > 100) local.length = 100;
+    localStorage.setItem("local_entries", JSON.stringify(local));
+
+    showToast("Humeur enregistrée ✓");
+    selectedMood = null;
+    document.querySelectorAll(".mood-btn").forEach(b => b.classList.remove("selected"));
+    document.getElementById("note").value = "";
+
+  } catch (err) {
+    showToast("Erreur réseau — réessaie", "#e05252");
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Enregistrer";
+}
+
+// ─── HISTORY ──────────────────────────────────────────────────
+async function loadHistory() {
+  const url = APPS_SCRIPT_URL();
+  const list = document.getElementById("entry-list");
+
+  // Show local data immediately
+  const local = JSON.parse(localStorage.getItem("local_entries") || "[]");
+  renderEntries(local, list);
+  renderStats(local);
+
+  if (!url) return;
+
+  try {
+    const res = await fetch(url + "?action=get");
+    const data = await res.json();
+    if (data.success && data.entries.length) {
+      renderEntries(data.entries, list);
+      renderStats(data.entries);
+    }
+  } catch (_) {
+    // use local fallback silently
+  }
+}
+
+function renderEntries(entries, list) {
+  if (!entries || entries.length === 0) {
+    list.innerHTML = '<div class="empty-state">Aucune entrée pour l\'instant.<br>Commence à logger ton humeur !</div>';
+    return;
+  }
+
+  list.innerHTML = entries.slice(0, 20).map(e => {
+    const mood = e.mood || e["Humeur (1-10)"];
+    const note = e.note !== undefined ? e.note : (e["Note"] || "");
+    const ts = e.timestamp || e["Timestamp"];
+    const date = ts ? new Date(ts) : null;
+    const dateStr = date ? date.toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : (e.date || "");
+    const color = moodColor(mood);
+
+    return `
+      <div class="entry">
+        <div class="entry-mood" style="background:${color}22;color:${color}">${mood}</div>
+        <div class="entry-meta">
+          <div class="entry-datetime">${dateStr}</div>
+          ${note ? `<div class="entry-note">${note}</div>` : ""}
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function renderStats(entries) {
+  if (!entries || entries.length === 0) return;
+
+  const moods = entries.map(e => parseFloat(e.mood || e["Humeur (1-10)"])).filter(v => !isNaN(v));
+  const avg = (moods.reduce((a, b) => a + b, 0) / moods.length).toFixed(1);
+
+  // Streak: count unique days from today backwards
+  const days = new Set(entries.map(e => {
+    const ts = e.timestamp || e["Timestamp"];
+    return ts ? new Date(ts).toDateString() : null;
+  }).filter(Boolean));
+  const streak = days.size;
+
+  document.getElementById("stat-avg").textContent = avg;
+  document.getElementById("stat-count").textContent = moods.length;
+  document.getElementById("stat-streak").textContent = streak;
+
+  renderMiniChart(entries);
+}
+
+function renderMiniChart(entries) {
+  const chart = document.getElementById("mini-chart");
+  chart.innerHTML = "";
+
+  // Group by day (last 7 days)
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push({ label: d.toLocaleDateString("fr-FR", { weekday: "narrow" }), key: d.toDateString() });
+  }
+
+  const byDay = {};
+  entries.forEach(e => {
+    const ts = e.timestamp || e["Timestamp"];
+    if (!ts) return;
+    const key = new Date(ts).toDateString();
+    const val = parseFloat(e.mood || e["Humeur (1-10)"]);
+    if (!byDay[key]) byDay[key] = [];
+    if (!isNaN(val)) byDay[key].push(val);
+  });
+
+  days.forEach(({ label, key }) => {
+    const vals = byDay[key];
+    const avg = vals ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    const height = avg ? Math.round((avg / 10) * 100) : 0;
+    const color = avg ? moodColor(Math.round(avg)) : "var(--border)";
+
+    const wrap = document.createElement("div");
+    wrap.className = "bar-wrap";
+    wrap.innerHTML = `
+      <div class="bar" style="height:${height}%;background:${color}"></div>
+      <div class="bar-day">${label}</div>`;
+    chart.appendChild(wrap);
+  });
+}
+
+function moodColor(v) {
+  const colors = {
+    1: "#e05252", 2: "#e07252", 3: "#e09952", 4: "#d4b84a", 5: "#c4c44a",
+    6: "#9ecc52", 7: "#6ccc62", 8: "#4cbf82", 9: "#4cb0cc", 10: "#7c6af5"
+  };
+  return colors[v] || "#7c6af5";
+}
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────
+async function requestNotifications() {
+  if (!("Notification" in window)) {
+    showToast("Notifications non supportées", "#e05252");
+    return;
+  }
+
+  const perm = await Notification.requestPermission();
+  if (perm === "granted") {
+    document.getElementById("notif-banner").style.display = "none";
+    scheduleNotificationsIfNeeded(true);
+    showToast("Rappels activés ✓");
+  } else {
+    showToast("Autorisation refusée", "#e07252");
+  }
+}
+
+function scheduleNotificationsIfNeeded(force = false) {
+  if (Notification.permission !== "granted") return;
+
+  const today = new Date().toDateString();
+  const stored = JSON.parse(localStorage.getItem("notif_schedule") || "{}");
+
+  if (!force && stored.date === today) return; // already scheduled today
+
+  const windows = [
+    { start: 8, end: 11, label: "Matin" },
+    { start: 12, end: 15, label: "Midi" },
+    { start: 18, end: 21, label: "Soir" }
+  ];
+
+  const now = new Date();
+  const schedule = [];
+
+  windows.forEach(w => {
+    const fireAt = randomMinuteInWindow(w.start, w.end);
+    if (fireAt > now) {
+      schedule.push({ time: fireAt.toISOString(), label: w.label });
+      const delay = fireAt - now;
+      setTimeout(() => fireNotification(w.label), delay);
+    }
+  });
+
+  localStorage.setItem("notif_schedule", JSON.stringify({ date: today, schedule }));
+}
+
+function randomMinuteInWindow(startH, endH) {
+  const d = new Date();
+  const totalMins = (endH - startH) * 60;
+  const rand = Math.floor(Math.random() * totalMins);
+  d.setHours(startH + Math.floor(rand / 60), rand % 60, 0, 0);
+  return d;
+}
+
+function fireNotification(period) {
+  if (Notification.permission !== "granted") return;
+  const messages = [
+    `Comment tu te sens en ce ${period.toLowerCase()} ?`,
+    `Un petit check-in rapide 🙂`,
+    `${period} — prends 5 secondes pour noter ton humeur.`,
+  ];
+  const msg = messages[Math.floor(Math.random() * messages.length)];
+
+  if (navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: "SHOW_NOTIF", body: msg });
+  } else {
+    new Notification("Mood", { body: msg, icon: "icon.png" });
+  }
+}
+
+// ─── SETTINGS ─────────────────────────────────────────────────
+function saveUrl(val) {
+  localStorage.setItem("apps_script_url", val.trim());
+}
+
+// ─── TOAST ────────────────────────────────────────────────────
+function showToast(msg, bg = "#4caf82") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.background = bg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+</script>
+</body>
+</html>
