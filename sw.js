@@ -7,8 +7,8 @@ const ASSETS = ["/", "/index.html"];
 
 // Fenêtres de notification (heure de début, heure de fin)
 const WINDOWS = [
-  { start: 8,  end: 11, tag: "mood-matin" },
-  { start: 12, end: 15, tag: "mood-midi" },
+  { start: 8,  end: 12, tag: "mood-matin" },
+  { start: 12, end: 18, tag: "mood-midi" },
   { start: 18, end: 21, tag: "mood-soir" },
 ];
 
